@@ -43,6 +43,7 @@ app.post('/api/secrets', (req, res) => {
       id: uuidv4(),
       content: content.trim(),
       status: '已宽恕',
+      likeCount: 0,
       createdAt: new Date().toISOString()
     };
 
@@ -80,11 +81,39 @@ app.get('/api/secrets/random', (req, res) => {
       secret: {
         id: randomSecret.id,
         content: randomSecret.content,
-        status: randomSecret.status
+        status: randomSecret.status,
+        likeCount: randomSecret.likeCount || 0
       }
     });
   } catch (error) {
     console.error('获取随机秘密时出错:', error);
+    res.status(500).json({ error: '服务器内部错误' });
+  }
+});
+
+app.post('/api/secrets/:id/like', (req, res) => {
+  try {
+    const { id } = req.params;
+    const secrets = readSecrets();
+    const secretIndex = secrets.findIndex(s => s.id === id);
+
+    if (secretIndex === -1) {
+      return res.status(404).json({ error: '秘密不存在' });
+    }
+
+    if (typeof secrets[secretIndex].likeCount !== 'number') {
+      secrets[secretIndex].likeCount = 0;
+    }
+    secrets[secretIndex].likeCount += 1;
+
+    writeSecrets(secrets);
+
+    res.json({
+      success: true,
+      likeCount: secrets[secretIndex].likeCount
+    });
+  } catch (error) {
+    console.error('点亮秘密时出错:', error);
     res.status(500).json({ error: '服务器内部错误' });
   }
 });
